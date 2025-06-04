@@ -1,11 +1,5 @@
-const NEWS_API_BASE_URL = 'https://newsapi.org/v2/everything';
-const NEWS_API_KEY = 'e20516563ab3449ba089d7e58a56db6d';
-const DEFAULT_QUERY_PARAMS = {
-    q: 'bitcoin',
-    sortBy: 'publishedAt',
-    language: 'en',
-    pageSize: 100
-};
+// Constants are now defined in HTML script tag
+// Remove these constants from here since they're defined in HTML now
 
 // Get yesterday's date
 const yesterday = new Date();
@@ -18,10 +12,11 @@ async function fetchNews() {
         const params = new URLSearchParams({
             ...DEFAULT_QUERY_PARAMS,
             from: formattedDate,
-            apiKey: NEWS_API_KEY
+            apiKey: API_KEY
         });
 
-        const response = await fetch(`${NEWS_API_BASE_URL}?${params}`);
+        // Use proxy URL to bypass CORS
+        const response = await fetch(`${proxyUrl}${NEWS_API_BASE_URL}?${params}`);
         const data = await response.json();
         
         if (!response.ok) {
