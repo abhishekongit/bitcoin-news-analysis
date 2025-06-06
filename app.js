@@ -47,10 +47,6 @@ async function fetchNews() {
         updateStatus(`Error loading news: ${error.message}`, 'danger');
         throw error;
     }
-    } catch (error) {
-        console.error('Error fetching news:', error);
-        throw error;
-    }
 }
 
 // Simple sentiment analysis using keywords
