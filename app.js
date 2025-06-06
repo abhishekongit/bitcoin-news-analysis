@@ -1,12 +1,29 @@
 // Get variables from global scope (defined in HTML)
-const proxyUrl = window.proxyUrl;
-const API_KEY = window.API_KEY;
-const NEWS_API_BASE_URL = window.NEWS_API_BASE_URL;
-const DEFAULT_QUERY_PARAMS = window.DEFAULT_QUERY_PARAMS;
-const formattedDate = window.formattedDate;
+const proxyUrl = window.proxyUrl || '';
+const API_KEY = window.API_KEY || '';
+const NEWS_API_BASE_URL = window.NEWS_API_BASE_URL || '';
+const DEFAULT_QUERY_PARAMS = window.DEFAULT_QUERY_PARAMS || {};
+const formattedDate = window.formattedDate || '';
 
 // Update status message function
-const updateStatus = window.updateStatus;
+const updateStatus = window.updateStatus || ((message, type) => {
+    console.log(`Status: ${message}`);
+});
+
+// Initialize function to start the application
+async function initialize() {
+    if (!proxyUrl || !API_KEY || !NEWS_API_BASE_URL || !formattedDate) {
+        updateStatus('Missing required configuration', 'danger');
+        return;
+    }
+    try {
+        const articles = await fetchNews();
+        await processArticles(articles);
+    } catch (error) {
+        console.error('Error initializing:', error);
+        updateStatus(`Failed to initialize: ${error.message}`, 'danger');
+    }
+}
 
 // Initialize function to start the application
 async function initialize() {

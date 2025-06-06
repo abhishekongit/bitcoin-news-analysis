@@ -85,6 +85,14 @@
         statusDiv.textContent = message;
     };
 
+    // Make all variables globally accessible
+    window.proxyUrl = window.proxyUrl;
+    window.API_KEY = window.API_KEY;
+    window.NEWS_API_BASE_URL = window.NEWS_API_BASE_URL;
+    window.DEFAULT_QUERY_PARAMS = window.DEFAULT_QUERY_PARAMS;
+    window.formattedDate = window.formattedDate;
+    window.updateStatus = window.updateStatus;
+
     // Initialize the app once the DOM is loaded
     document.addEventListener('DOMContentLoaded', () => {
         initialize();
