@@ -1,10 +1,12 @@
-// Constants are now defined in HTML script tag
-// Remove these constants from here since they're defined in HTML now
+// Get variables from global scope (defined in HTML)
+const proxyUrl = window.proxyUrl;
+const API_KEY = window.API_KEY;
+const NEWS_API_BASE_URL = window.NEWS_API_BASE_URL;
+const DEFAULT_QUERY_PARAMS = window.DEFAULT_QUERY_PARAMS;
+const formattedDate = window.formattedDate;
 
-// Get yesterday's date
-const yesterday = new Date();
-yesterday.setDate(yesterday.getDate() - 1);
-const formattedDate = yesterday.toISOString().split('T')[0];
+// Update status message function
+const updateStatus = window.updateStatus;
 
 async function fetchNews() {
     try {
@@ -17,13 +19,23 @@ async function fetchNews() {
 
         // Use proxy URL to bypass CORS
         const response = await fetch(`${proxyUrl}${NEWS_API_BASE_URL}?${params}`);
-        const data = await response.json();
         
         if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.status !== 'ok') {
             throw new Error(`News API error: ${data.message || 'Unknown error'}`);
         }
 
         return data.articles;
+    } catch (error) {
+        console.error('Error fetching news:', error);
+        updateStatus(`Error loading news: ${error.message}`, 'danger');
+        throw error;
+    }
     } catch (error) {
         console.error('Error fetching news:', error);
         throw error;
