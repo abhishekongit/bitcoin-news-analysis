@@ -8,6 +8,17 @@ const formattedDate = window.formattedDate;
 // Update status message function
 const updateStatus = window.updateStatus;
 
+// Initialize function to start the application
+async function initialize() {
+    try {
+        const articles = await fetchNews();
+        await processArticles(articles);
+    } catch (error) {
+        console.error('Error initializing:', error);
+        updateStatus(`Failed to initialize: ${error.message}`, 'danger');
+    }
+}
+
 async function fetchNews() {
     try {
         // Create query parameters
