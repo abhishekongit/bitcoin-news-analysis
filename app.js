@@ -33,6 +33,13 @@ async function initialize() {
 
 async function fetchNews() {
     try {
+        // Log configuration
+        console.log('Configuration:', {
+            NEWS_API_BASE_URL,
+            API_KEY: API_KEY ? '***' : 'undefined', // Mask API key for security
+            formattedDate
+        });
+
         // Create query parameters
         const params = new URLSearchParams({
             q: 'bitcoin',
@@ -43,19 +50,23 @@ async function fetchNews() {
             apiKey: API_KEY
         });
 
-        // Log the full URL for debugging
+        // Log the full URL for debugging (mask API key)
         const fullUrl = `${NEWS_API_BASE_URL}?${params}`;
-        console.log('Fetching from:', fullUrl);
+        console.log('Fetching from:', fullUrl.replace(API_KEY, '***'));
 
         // Make the request
         const response = await fetch(fullUrl);
         
         if (!response.ok) {
-            throw new Error(`API request failed with status: ${response.status}`);
+            // Get the response text to see what error we're getting
+            const errorText = await response.text();
+            console.error('API error response:', errorText);
+            throw new Error(`API request failed with status: ${response.status}. Response: ${errorText}`);
         }
 
         const text = await response.text();
         try {
+            console.log('Raw response:', text.substring(0, 200)); // Log first 200 chars
             const data = JSON.parse(text);
             console.log('API Response:', data);
             
@@ -66,7 +77,7 @@ async function fetchNews() {
             return data.articles || [];
         } catch (parseError) {
             console.error('API response text:', text);
-            throw new Error(`Invalid JSON response: ${parseError.message}`);
+            throw new Error(`Invalid JSON response: ${parseError.message}. Raw response: ${text.substring(0, 200)}`);
         }
     } catch (error) {
         console.error('Error fetching news:', error);
