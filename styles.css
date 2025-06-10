@@ -3,6 +3,8 @@ body {
     background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
     background-size: cover;
     background-attachment: fixed;
+    position: relative;
+    min-height: 100vh;
 }
 
 /* Add crypto pattern overlay */
@@ -18,6 +20,20 @@ body::before {
     z-index: -1;
 }
 
+/* Bitcoin symbol pattern */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Cpath d="M50 0L0 50L50 100L100 50L50 0z" fill="%23e3e3e3"/%3E%3C/svg%3E');
+    background-size: 50px 50px;
+    opacity: 0.05;
+    z-index: -1;
+}
+
 /* Card styling */
 .card {
     background: rgba(255, 255, 255, 0.05);
@@ -25,20 +41,33 @@ body::before {
     border-radius: 15px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
 }
 
 .card-title {
     color: #fff;
     font-weight: 600;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
 }
 
 /* Chart styling */
-#marketTrendChart {
-    height: 300px;
+.chart-container {
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
+    border-radius: 15px;
     padding: 1rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+#marketTrendChart {
+    height: 250px;
+    width: 100%;
 }
 
 /* Article cards */
@@ -54,10 +83,14 @@ body::before {
 .card-body h5 {
     color: #fff;
     font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
 }
 
 .card-body p {
     color: #ddd;
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
 }
 
 .btn-primary {
