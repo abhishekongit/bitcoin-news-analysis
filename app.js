@@ -56,8 +56,8 @@ async function fetchNews() {
         const approaches = [
             // Direct request (should work since API key is valid)
             { name: 'direct', url: `${NEWS_API_BASE_URL}?${queryParams}` },
-            // Try with cors-anywhere
-            { name: 'cors-anywhere', url: `${proxyUrl}${NEWS_API_BASE_URL}?${queryParams}` },
+            // Try with local proxy
+            { name: 'local-proxy', url: `${proxyUrl}${NEWS_API_BASE_URL}?${queryParams}` },
             // Try with alternative CORS proxy
             { name: 'alternative-proxy', url: `https://api.allorigins.win/get?url=${encodeURIComponent(`${NEWS_API_BASE_URL}?${queryParams}`)}` }
         ];
@@ -124,9 +124,9 @@ async function fetchNews() {
             console.error('Response text:', responseText);
             throw new Error(`Invalid JSON response: ${parseError.message}. Raw response: ${responseText.substring(0, 200)}`);
         }
-        }
     } catch (error) {
-        console.error('Error fetching news:', error);
+        console.error('=== Error in fetchNews ===');
+        console.error('Error details:', error);
         updateStatus(`Error loading news: ${error.message}`, 'danger');
         throw error;
     }
@@ -218,17 +218,14 @@ function processArticles(articles) {
     `;
 }
 
-// Main function to initialize the application
-async function initialize() {
+// Initialize the app when DOM is loaded
+document.addEventListener('DOMContentLoaded', async () => {
     try {
-        const articles = await fetchNews();
-        await processArticles(articles);
+        await initialize();
     } catch (error) {
-        console.error('Error initializing:', error);
+        console.error('Error in DOMContentLoaded:', error);
+        updateStatus(`Error loading news: ${error.message}`, 'danger');
         document.getElementById('bullishSummary').innerHTML = 'Error loading data. Please try again later.';
         document.getElementById('bearishSummary').innerHTML = 'Error loading data. Please try again later.';
     }
-}
-
-// Start the application
-document.addEventListener('DOMContentLoaded', initialize);
+});
