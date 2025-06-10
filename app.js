@@ -33,6 +33,21 @@ async function initialize() {
 
 async function fetchNews() {
     try {
+        // Log configuration and date
+        const now = new Date();
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        console.log('Current time:', now.toISOString());
+        console.log('Yesterday:', yesterday.toISOString());
+        console.log('Formatted date:', formattedDate);
+
+        // Test the date by fetching a single article
+        const testUrl = `${NEWS_API_BASE_URL}?q=bitcoin&from=${formattedDate}&sortBy=publishedAt&language=en&apiKey=${API_KEY}`;
+        console.log('Testing with:', testUrl.replace(API_KEY, '***'));
+        const testResponse = await fetch(testUrl);
+        const testText = await testResponse.text();
+        console.log('Test response:', testText.substring(0, 200));
+
         // Log configuration
         console.log('Configuration:', {
             NEWS_API_BASE_URL,
