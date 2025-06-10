@@ -43,21 +43,42 @@ async function fetchNews() {
         const fullUrl = `${NEWS_API_BASE_URL}?${params}`;
         console.log('Fetching from:', fullUrl);
 
-        // Use proxy URL to bypass CORS
-        const response = await fetch(`${proxyUrl}${fullUrl}`);
+        // First try without proxy (for testing)
+        const response = await fetch(fullUrl);
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            console.log('Trying with proxy...');
+            // If that fails, try with proxy
+            const proxyResponse = await fetch(`${proxyUrl}${fullUrl}`);
+            
+            if (!proxyResponse.ok) {
+                throw new Error(`Proxy error! status: ${proxyResponse.status}`);
+            }
+            
+            const proxyText = await proxyResponse.text();
+            try {
+                const proxyData = JSON.parse(proxyText);
+                return proxyData.articles || [];
+            } catch (parseError) {
+                console.error('Proxy response text:', proxyText);
+                throw new Error(`Invalid JSON response from proxy: ${parseError.message}`);
+            }
         }
 
-        const data = await response.json();
-        console.log('API Response:', data);
-        
-        if (data.status !== 'ok') {
-            throw new Error(`News API error: ${data.message || 'Unknown error'}`);
-        }
+        const text = await response.text();
+        try {
+            const data = JSON.parse(text);
+            console.log('API Response:', data);
+            
+            if (data.status !== 'ok') {
+                throw new Error(`News API error: ${data.message || 'Unknown error'}`);
+            }
 
-        return data.articles || [];
+            return data.articles || [];
+        } catch (parseError) {
+            console.error('API response text:', text);
+            throw new Error(`Invalid JSON response: ${parseError.message}`);
+        }
     } catch (error) {
         console.error('Error fetching news:', error);
         updateStatus(`Error loading news: ${error.message}`, 'danger');
