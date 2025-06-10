@@ -41,22 +41,8 @@ async function fetchNews() {
         console.log('Yesterday:', yesterday.toISOString());
         console.log('Formatted date:', formattedDate);
 
-        // Test the date by fetching a single article
-        const testUrl = `${NEWS_API_BASE_URL}?q=bitcoin&from=${formattedDate}&sortBy=publishedAt&language=en&apiKey=${API_KEY}`;
-        console.log('Testing with:', testUrl.replace(API_KEY, '***'));
-        const testResponse = await fetch(testUrl);
-        const testText = await testResponse.text();
-        console.log('Test response:', testText.substring(0, 200));
-
-        // Log configuration
-        console.log('Configuration:', {
-            NEWS_API_BASE_URL,
-            API_KEY: API_KEY ? '***' : 'undefined', // Mask API key for security
-            formattedDate
-        });
-
-        // Create query parameters
-        const params = new URLSearchParams({
+        // Create query parameters once
+        const queryParams = new URLSearchParams({
             q: 'bitcoin',
             from: formattedDate,
             sortBy: 'publishedAt',
@@ -65,6 +51,58 @@ async function fetchNews() {
             apiKey: API_KEY
         });
 
+        // Try multiple approaches
+        const approaches = [
+            // Direct request (should work since API key is valid)
+            { name: 'direct', url: `${NEWS_API_BASE_URL}?${queryParams}` },
+            // Try with cors-anywhere
+            { name: 'cors-anywhere', url: `${proxyUrl}${NEWS_API_BASE_URL}?${queryParams}` },
+            // Try with alternative CORS proxy
+            { name: 'alternative-proxy', url: `https://api.allorigins.win/get?url=${encodeURIComponent(`${NEWS_API_BASE_URL}?${queryParams}`)}` }
+        ];
+
+        let successfulResponse;
+        for (const approach of approaches) {
+            console.log(`Trying ${approach.name} approach...`);
+            try {
+                const response = await fetch(approach.url);
+                if (response.ok) {
+                    console.log(`${approach.name} approach succeeded!`);
+                    successfulResponse = response;
+                    break;
+                }
+                console.log(`${approach.name} failed with status: ${response.status}`);
+            } catch (error) {
+                console.error(`${approach.name} failed:`, error);
+            }
+        }
+
+        if (!successfulResponse) {
+            throw new Error('All approaches failed to fetch data');
+        }
+
+        const responseText = await successfulResponse.text();
+        try {
+            // For alternative proxy, we need to parse the proxy response
+            let data;
+            if (approach.name === 'alternative-proxy') {
+                const proxyResponse = JSON.parse(responseText);
+                data = JSON.parse(proxyResponse.contents);
+            } else {
+                data = JSON.parse(responseText);
+            }
+
+            console.log('API Response:', data);
+            
+            if (data.status !== 'ok') {
+                throw new Error(`News API error: ${data.message || 'Unknown error'}`);
+            }
+
+            return data.articles || [];
+        } catch (parseError) {
+            console.error('API response text:', responseText);
+            throw new Error(`Invalid JSON response: ${parseError.message}. Raw response: ${responseText.substring(0, 200)}`);
+        }
         // Log the full URL for debugging (mask API key)
         const fullUrl = `${NEWS_API_BASE_URL}?${params}`;
         console.log('Fetching from:', fullUrl.replace(API_KEY, '***'));
