@@ -224,6 +224,63 @@ function processArticles(articles) {
 // Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        // Initialize market trend chart
+        const ctx = document.getElementById('marketTrendChart').getContext('2d');
+        const marketTrendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['1D', '2D', '3D', '4D', '5D', '6D', '7D'],
+                datasets: [{
+                    label: 'Bitcoin Price (USD)',
+                    data: [60000, 62000, 63000, 64000, 65000, 66000, 67000],
+                    borderColor: 'rgb(0, 255, 0)',
+                    backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#fff'
+                        }
+                    },
+                    title: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            color: '#fff',
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#fff'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Initialize news app
         await initialize();
     } catch (error) {
         console.error('Error in DOMContentLoaded:', error);
