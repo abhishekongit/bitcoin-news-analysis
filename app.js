@@ -97,10 +97,13 @@ async function fetchNews() {
         const responseText = await successfulResponse.text();
         console.log('Response text (first 200 chars):', responseText.substring(0, 200));
 
+        // Store the successful approach
+        const successfulApproach = approaches.find(a => a.name === 'local-proxy');
+
         try {
             // For alternative proxy, we need to parse the proxy response
             let data;
-            if (approach.name === 'alternative-proxy') {
+            if (successfulApproach?.name === 'alternative-proxy') {
                 console.log('Parsing proxy response...');
                 const proxyResponse = JSON.parse(responseText);
                 data = JSON.parse(proxyResponse.contents);
