@@ -17,10 +17,14 @@ async function initialize() {
         return;
     }
     try {
+        updateStatus('Fetching news articles...', 'info');
         const articles = await fetchNews();
+        if (!articles || articles.length === 0) {
+            updateStatus('No articles found', 'warning');
+            return;
+        }
         await processArticles(articles);
-    } catch (error) {
-        console.error('Error initializing:', error);
+        updateStatus('Articles loaded successfully', 'success');
     } catch (error) {
         console.error('Error initializing:', error);
         updateStatus(`Failed to initialize: ${error.message}`, 'danger');
@@ -84,11 +88,6 @@ async function fetchNews() {
         updateStatus(`Error loading news: ${error.message}`, 'danger');
         throw error;
     }
-    } catch (error) {
-        console.error('Error fetching news:', error);
-        updateStatus(`Error loading news: ${error.message}`, 'danger');
-        throw error;
-    }
 }
 
 // Simple sentiment analysis using keywords
@@ -118,6 +117,12 @@ function analyzeSentiment(text) {
 }
 
 function processArticles(articles) {
+    if (!articles || !Array.isArray(articles)) {
+        console.error('Invalid articles data:', articles);
+        updateStatus('Invalid news articles data received', 'danger');
+        return;
+    }
+
     let bullishContent = '';
     let bearishContent = '';
     const newsList = document.getElementById('newsArticles');
@@ -126,26 +131,37 @@ function processArticles(articles) {
     newsList.innerHTML = '';
 
     for (const article of articles) {
-        // Create news item
-        const newsItem = document.createElement('div');
-        newsItem.className = 'card mb-3';
-        newsItem.innerHTML = `
-            <div class="card-body">
-                <h5 class="card-title">${article.title}</h5>
-                <p class="card-text">${article.description}</p>
-                <a href="${article.url}" class="btn btn-primary" target="_blank">Read More</a>
-            </div>
-        `;
-        newsList.appendChild(newsItem);
+        try {
+            // Create news item
+            const newsItem = document.createElement('div');
+            newsItem.className = 'card mb-3';
+            
+            // Handle undefined values safely
+            const title = article.title || 'No title available';
+            const description = article.description || 'No description available';
+            const url = article.url || '#';
+            
+            newsItem.innerHTML = `
+                <div class="card-body">
+                    <h5 class="card-title">${title}</h5>
+                    <p class="card-text">${description}</p>
+                    <a href="${url}" class="btn btn-primary" target="_blank">Read More</a>
+                </div>
+            `;
+            newsList.appendChild(newsItem);
 
-        // Analyze sentiment
-        const sentiment = analyzeSentiment(article.description || article.title);
-        
-        // Add article to appropriate summary
-        if (sentiment.score > 0) {
-            bullishContent += `<p><strong>${article.title}</strong>: ${article.description}</p>`;
-        } else if (sentiment.score < 0) {
-            bearishContent += `<p><strong>${article.title}</strong>: ${article.description}</p>`;
+            // Analyze sentiment
+            const sentiment = analyzeSentiment(description || title);
+            
+            // Add to appropriate summary
+            if (sentiment.score > 0) {
+                bullishContent += `<p><strong>${title}</strong>: ${description}</p>`;
+            } else if (sentiment.score < 0) {
+                bearishContent += `<p><strong>${title}</strong>: ${description}</p>`;
+            }
+        } catch (error) {
+            console.error('Error processing article:', error);
+            continue;
         }
     }
 
