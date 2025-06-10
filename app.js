@@ -33,15 +33,15 @@ async function initialize() {
 
 async function fetchNews() {
     try {
-        // Log configuration and date
-        const now = new Date();
-        const yesterday = new Date(now);
-        yesterday.setDate(yesterday.getDate() - 1);
-        console.log('Current time:', now.toISOString());
-        console.log('Yesterday:', yesterday.toISOString());
-        console.log('Formatted date:', formattedDate);
+        console.log('=== Starting fetchNews ===');
+        console.log('Configuration:', {
+            NEWS_API_BASE_URL,
+            API_KEY: API_KEY ? '***' : 'undefined',
+            formattedDate,
+            proxyUrl
+        });
 
-        // Create query parameters once
+        // Create query parameters
         const queryParams = new URLSearchParams({
             q: 'bitcoin',
             from: formattedDate,
@@ -50,6 +50,7 @@ async function fetchNews() {
             pageSize: 100,
             apiKey: API_KEY
         });
+        console.log('Query parameters:', queryParams.toString());
 
         // Try multiple approaches
         const approaches = [
@@ -61,19 +62,30 @@ async function fetchNews() {
             { name: 'alternative-proxy', url: `https://api.allorigins.win/get?url=${encodeURIComponent(`${NEWS_API_BASE_URL}?${queryParams}`)}` }
         ];
 
+        console.log('Available approaches:', approaches.map(a => a.name));
+
         let successfulResponse;
         for (const approach of approaches) {
-            console.log(`Trying ${approach.name} approach...`);
+            console.log(`\n=== Attempting approach: ${approach.name} ===`);
+            console.log('Request URL:', approach.url);
+            
             try {
+                console.log('Making request...');
                 const response = await fetch(approach.url);
+                
+                console.log('Response status:', response.status);
+                
                 if (response.ok) {
                     console.log(`${approach.name} approach succeeded!`);
                     successfulResponse = response;
                     break;
+                } else {
+                    console.log(`${approach.name} failed with status: ${response.status}`);
+                    const errorText = await response.text();
+                    console.error(`${approach.name} error response:`, errorText.substring(0, 200));
                 }
-                console.log(`${approach.name} failed with status: ${response.status}`);
             } catch (error) {
-                console.error(`${approach.name} failed:`, error);
+                console.error(`${approach.name} failed with error:`, error);
             }
         }
 
@@ -81,18 +93,26 @@ async function fetchNews() {
             throw new Error('All approaches failed to fetch data');
         }
 
+        console.log('Got successful response, parsing...');
         const responseText = await successfulResponse.text();
+        console.log('Response text (first 200 chars):', responseText.substring(0, 200));
+
         try {
             // For alternative proxy, we need to parse the proxy response
             let data;
             if (approach.name === 'alternative-proxy') {
+                console.log('Parsing proxy response...');
                 const proxyResponse = JSON.parse(responseText);
                 data = JSON.parse(proxyResponse.contents);
             } else {
+                console.log('Parsing direct response...');
                 data = JSON.parse(responseText);
             }
 
-            console.log('API Response:', data);
+            console.log('Successfully parsed data:', {
+                status: data.status,
+                articleCount: data.articles?.length || 0
+            });
             
             if (data.status !== 'ok') {
                 throw new Error(`News API error: ${data.message || 'Unknown error'}`);
@@ -100,37 +120,10 @@ async function fetchNews() {
 
             return data.articles || [];
         } catch (parseError) {
-            console.error('API response text:', responseText);
+            console.error('Error parsing response:', parseError);
+            console.error('Response text:', responseText);
             throw new Error(`Invalid JSON response: ${parseError.message}. Raw response: ${responseText.substring(0, 200)}`);
         }
-        // Log the full URL for debugging (mask API key)
-        const fullUrl = `${NEWS_API_BASE_URL}?${params}`;
-        console.log('Fetching from:', fullUrl.replace(API_KEY, '***'));
-
-        // Make the request
-        const response = await fetch(fullUrl);
-        
-        if (!response.ok) {
-            // Get the response text to see what error we're getting
-            const errorText = await response.text();
-            console.error('API error response:', errorText);
-            throw new Error(`API request failed with status: ${response.status}. Response: ${errorText}`);
-        }
-
-        const text = await response.text();
-        try {
-            console.log('Raw response:', text.substring(0, 200)); // Log first 200 chars
-            const data = JSON.parse(text);
-            console.log('API Response:', data);
-            
-            if (data.status !== 'ok') {
-                throw new Error(`News API error: ${data.message || 'Unknown error'}`);
-            }
-
-            return data.articles || [];
-        } catch (parseError) {
-            console.error('API response text:', text);
-            throw new Error(`Invalid JSON response: ${parseError.message}. Raw response: ${text.substring(0, 200)}`);
         }
     } catch (error) {
         console.error('Error fetching news:', error);
