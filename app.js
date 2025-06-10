@@ -21,15 +21,6 @@ async function initialize() {
         await processArticles(articles);
     } catch (error) {
         console.error('Error initializing:', error);
-        updateStatus(`Failed to initialize: ${error.message}`, 'danger');
-    }
-}
-
-// Initialize function to start the application
-async function initialize() {
-    try {
-        const articles = await fetchNews();
-        await processArticles(articles);
     } catch (error) {
         console.error('Error initializing:', error);
         updateStatus(`Failed to initialize: ${error.message}`, 'danger');
@@ -40,25 +31,38 @@ async function fetchNews() {
     try {
         // Create query parameters
         const params = new URLSearchParams({
-            ...DEFAULT_QUERY_PARAMS,
+            q: 'bitcoin',
             from: formattedDate,
+            sortBy: 'publishedAt',
+            language: 'en',
+            pageSize: 100,
             apiKey: API_KEY
         });
 
+        // Log the full URL for debugging
+        const fullUrl = `${NEWS_API_BASE_URL}?${params}`;
+        console.log('Fetching from:', fullUrl);
+
         // Use proxy URL to bypass CORS
-        const response = await fetch(`${proxyUrl}${NEWS_API_BASE_URL}?${params}`);
+        const response = await fetch(`${proxyUrl}${fullUrl}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
+        console.log('API Response:', data);
         
         if (data.status !== 'ok') {
             throw new Error(`News API error: ${data.message || 'Unknown error'}`);
         }
 
-        return data.articles;
+        return data.articles || [];
+    } catch (error) {
+        console.error('Error fetching news:', error);
+        updateStatus(`Error loading news: ${error.message}`, 'danger');
+        throw error;
+    }
     } catch (error) {
         console.error('Error fetching news:', error);
         updateStatus(`Error loading news: ${error.message}`, 'danger');
