@@ -33,7 +33,15 @@ async function initialize() {
 
 async function fetchNews() {
     try {
-        // Create query parameters
+        // First, test API key with a simple request
+        const testUrl = `${NEWS_API_BASE_URL}?q=bitcoin&apiKey=${API_KEY}`;
+        const testResponse = await fetch(`${proxyUrl}${testUrl}`);
+        
+        if (!testResponse.ok) {
+            throw new Error(`API key test failed with status: ${testResponse.status}`);
+        }
+
+        // If test succeeds, proceed with full query
         const params = new URLSearchParams({
             q: 'bitcoin',
             from: formattedDate,
@@ -47,26 +55,11 @@ async function fetchNews() {
         const fullUrl = `${NEWS_API_BASE_URL}?${params}`;
         console.log('Fetching from:', fullUrl);
 
-        // First try without proxy (for testing)
-        const response = await fetch(fullUrl);
+        // Use proxy URL
+        const response = await fetch(`${proxyUrl}${fullUrl}`);
         
         if (!response.ok) {
-            console.log('Trying with proxy...');
-            // If that fails, try with proxy
-            const proxyResponse = await fetch(`${proxyUrl}${fullUrl}`);
-            
-            if (!proxyResponse.ok) {
-                throw new Error(`Proxy error! status: ${proxyResponse.status}`);
-            }
-            
-            const proxyText = await proxyResponse.text();
-            try {
-                const proxyData = JSON.parse(proxyText);
-                return proxyData.articles || [];
-            } catch (parseError) {
-                console.error('Proxy response text:', proxyText);
-                throw new Error(`Invalid JSON response from proxy: ${parseError.message}`);
-            }
+            throw new Error(`API request failed with status: ${response.status}`);
         }
 
         const text = await response.text();
