@@ -10,6 +10,38 @@ const updateStatus = window.updateStatus || ((message, type) => {
     console.log(`Status: ${message}`);
 });
 
+// Cache configuration
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_KEY = 'bitcoin-news-cache';
+
+// Initialize IndexedDB
+document.addEventListener('DOMContentLoaded', async () => {
+    await initializeDB();
+});
+
+async function initializeDB() {
+    try {
+        const request = indexedDB.open('BitcoinNewsCache', 1);
+        
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('articles')) {
+                db.createObjectStore('articles', { keyPath: 'date' });
+            }
+        };
+
+        request.onerror = (event) => {
+            console.error('Error initializing database:', event.target.error);
+        };
+
+        request.onsuccess = (event) => {
+            console.log('Database initialized successfully');
+        };
+    } catch (error) {
+        console.error('Error initializing database:', error);
+    }
+}
+
 // Initialize function to start the application
 async function initialize() {
     if (!proxyUrl || !API_KEY || !NEWS_API_BASE_URL || !formattedDate) {
@@ -51,6 +83,13 @@ async function fetchNews() {
             apiKey: API_KEY
         });
         console.log('Query parameters:', queryParams.toString());
+
+        // Try to get from cache first
+        const cachedArticles = await getCachedArticles(formattedDate);
+        if (cachedArticles) {
+            console.log('Using cached articles');
+            return cachedArticles;
+        }
 
         // Try multiple approaches
         const approaches = [
@@ -97,13 +136,10 @@ async function fetchNews() {
         const responseText = await successfulResponse.text();
         console.log('Response text (first 200 chars):', responseText.substring(0, 200));
 
-        // Store the successful approach
-        const successfulApproach = approaches.find(a => a.name === 'local-proxy');
-
         try {
             // For alternative proxy, we need to parse the proxy response
             let data;
-            if (successfulApproach?.name === 'alternative-proxy') {
+            if (approach.name === 'alternative-proxy') {
                 console.log('Parsing proxy response...');
                 const proxyResponse = JSON.parse(responseText);
                 data = JSON.parse(proxyResponse.contents);
@@ -121,6 +157,9 @@ async function fetchNews() {
                 throw new Error(`News API error: ${data.message || 'Unknown error'}`);
             }
 
+            // Cache the articles
+            await cacheArticles(formattedDate, data.articles);
+
             return data.articles || [];
         } catch (parseError) {
             console.error('Error parsing response:', parseError);
@@ -133,6 +172,70 @@ async function fetchNews() {
         updateStatus(`Error loading news: ${error.message}`, 'danger');
         throw error;
     }
+}
+
+async function cacheArticles(date, articles) {
+    try {
+        const db = await openDB();
+        const tx = db.transaction('articles', 'readwrite');
+        const store = tx.objectStore('articles');
+        
+        const entry = {
+            date,
+            articles,
+            timestamp: Date.now()
+        };
+        
+        await new Promise((resolve, reject) => {
+            const request = store.put(entry);
+            request.onsuccess = resolve;
+            request.onerror = reject;
+        });
+        
+        console.log('Articles cached successfully');
+    } catch (error) {
+        console.error('Error caching articles:', error);
+    }
+}
+
+async function getCachedArticles(date) {
+    try {
+        const db = await openDB();
+        const tx = db.transaction('articles', 'readonly');
+        const store = tx.objectStore('articles');
+        
+        const request = store.get(date);
+        const data = await new Promise((resolve) => {
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => resolve(null);
+        });
+        
+        if (data && Date.now() - data.timestamp < CACHE_DURATION) {
+            console.log('Returning cached articles');
+            return data.articles;
+        }
+        
+        // If cache is expired, delete it
+        if (data) {
+            const deleteTx = db.transaction('articles', 'readwrite');
+            const deleteStore = deleteTx.objectStore('articles');
+            deleteStore.delete(date);
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error getting cached articles:', error);
+        return null;
+    }
+}
+
+async function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('BitcoinNewsCache', 1);
+        
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+    });
 }
 
 // Simple sentiment analysis using keywords
