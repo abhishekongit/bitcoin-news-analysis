@@ -33,15 +33,7 @@ async function initialize() {
 
 async function fetchNews() {
     try {
-        // First, test API key with a simple request
-        const testUrl = `${NEWS_API_BASE_URL}?q=bitcoin&apiKey=${API_KEY}`;
-        const testResponse = await fetch(`${proxyUrl}${testUrl}`);
-        
-        if (!testResponse.ok) {
-            throw new Error(`API key test failed with status: ${testResponse.status}`);
-        }
-
-        // If test succeeds, proceed with full query
+        // Create query parameters
         const params = new URLSearchParams({
             q: 'bitcoin',
             from: formattedDate,
@@ -55,8 +47,8 @@ async function fetchNews() {
         const fullUrl = `${NEWS_API_BASE_URL}?${params}`;
         console.log('Fetching from:', fullUrl);
 
-        // Use proxy URL
-        const response = await fetch(`${proxyUrl}${fullUrl}`);
+        // Make the request
+        const response = await fetch(fullUrl);
         
         if (!response.ok) {
             throw new Error(`API request failed with status: ${response.status}`);
