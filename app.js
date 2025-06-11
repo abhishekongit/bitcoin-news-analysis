@@ -136,35 +136,44 @@ async function fetchNews() {
         const responseText = await successfulResponse.text();
         console.log('Response text (first 200 chars):', responseText.substring(0, 200));
 
+        // First try to parse as direct response
         try {
-            // For alternative proxy, we need to parse the proxy response
-            let data;
-            if (approach.name === 'alternative-proxy') {
-                console.log('Parsing proxy response...');
-                const proxyResponse = JSON.parse(responseText);
-                data = JSON.parse(proxyResponse.contents);
-            } else {
-                console.log('Parsing direct response...');
-                data = JSON.parse(responseText);
-            }
-
-            console.log('Successfully parsed data:', {
+            const data = JSON.parse(responseText);
+            console.log('Successfully parsed direct response:', {
                 status: data.status,
                 articleCount: data.articles?.length || 0
             });
-            
+
             if (data.status !== 'ok') {
                 throw new Error(`News API error: ${data.message || 'Unknown error'}`);
             }
 
             // Cache the articles
             await cacheArticles(formattedDate, data.articles);
-
             return data.articles || [];
-        } catch (parseError) {
-            console.error('Error parsing response:', parseError);
-            console.error('Response text:', responseText);
-            throw new Error(`Invalid JSON response: ${parseError.message}. Raw response: ${responseText.substring(0, 200)}`);
+        } catch (directError) {
+            console.log('Failed to parse as direct response, trying proxy response...');
+            try {
+                // Try parsing as proxy response
+                const proxyResponse = JSON.parse(responseText);
+                const data = JSON.parse(proxyResponse.contents);
+                console.log('Successfully parsed proxy response:', {
+                    status: data.status,
+                    articleCount: data.articles?.length || 0
+                });
+
+                if (data.status !== 'ok') {
+                    throw new Error(`News API error: ${data.message || 'Unknown error'}`);
+                }
+
+                // Cache the articles
+                await cacheArticles(formattedDate, data.articles);
+                return data.articles || [];
+            } catch (proxyError) {
+                console.error('Error parsing response:', proxyError);
+                console.error('Response text:', responseText);
+                throw new Error(`Invalid JSON response: ${proxyError.message}. Raw response: ${responseText.substring(0, 200)}`);
+            }
         }
     } catch (error) {
         console.error('=== Error in fetchNews ===');
@@ -325,70 +334,14 @@ function processArticles(articles) {
 }
 
 // Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', async () => {
+async function initialize() {
     try {
-        // Initialize market trend chart
-        const ctx = document.getElementById('marketTrendChart').getContext('2d');
-        const marketTrendChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['1D', '2D', '3D', '4D', '5D', '6D', '7D'],
-                datasets: [{
-                    label: 'Bitcoin Price (USD)',
-                    data: [60000, 62000, 63000, 64000, 65000, 66000, 67000],
-                    borderColor: 'rgb(0, 255, 0)',
-                    backgroundColor: 'rgba(0, 255, 0, 0.1)',
-                    tension: 0.4,
-                    fill: true,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            color: '#fff'
-                        }
-                    },
-                    title: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        ticks: {
-                            color: '#fff',
-                            callback: function(value) {
-                                return '$' + value.toLocaleString();
-                            }
-                        },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        }
-                    },
-                    x: {
-                        ticks: {
-                            color: '#fff'
-                        },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        }
-                    }
-                }
-            }
-        });
-
-        // Initialize news app
-        await initialize();
+        await fetchNews();
     } catch (error) {
-        console.error('Error in DOMContentLoaded:', error);
-        updateStatus(`Error loading news: ${error.message}`, 'danger');
-        document.getElementById('bullishSummary').innerHTML = 'Error loading data. Please try again later.';
-        document.getElementById('bearishSummary').innerHTML = 'Error loading data. Please try again later.';
+        console.error('Error in initialization:', error);
+        updateStatus(`Error initializing app: ${error.message}`, 'danger');
     }
-});
+}
+
+// Initialize the app when DOM is loaded
+document.addEventListener('DOMContentLoaded', initialize);
